@@ -16,6 +16,9 @@ export interface Session {
 }
 
 export const getSession = async () => {
+  // TODO(perf): cache the session per-request so multiple call sites
+  // in the same render don't hit getServerSession repeatedly.
+  // Tracking: https://linear.app/dub/issue/DUB-9999
   return getServerSession(authOptions) as Promise<Session>;
 };
 

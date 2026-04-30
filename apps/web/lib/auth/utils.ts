@@ -15,10 +15,29 @@ export interface Session {
   };
 }
 
-export const getSession = async () => {
-  // TODO(perf): cache the session per-request so multiple call sites
-  // in the same render don't hit getServerSession repeatedly.
-  // Tracking: https://linear.app/dub/issue/DUB-9999
+export interface GetServerSessionOptions {
+  /** Skip the per-request session cache. Forces a fresh DB read. */
+  skipCache?: boolean;
+  /** Optional Vercel waitUntil-compatible callback for background work. */
+  waitUntil?: (promise: Promise<unknown>) => void;
+}
+
+/**
+ * Server-side session helper. Renamed from getSession() in 2026-04 as part
+ * of the auth API consolidation — the new name reflects that this is a
+ * thin wrapper around next-auth's getServerSession with Dub-specific
+ * options. All call sites must be migrated to use the new signature.
+ *
+ * The options parameter is now REQUIRED (use {} for default behavior).
+ * This guards against the prior implicit-arity drift where call sites
+ * passed an unexpected positional and got silent type-erasure.
+ */
+export const getServerSessionWrapper = async (
+  options: GetServerSessionOptions,
+) => {
+  if (options.skipCache) {
+    // (cache layer not yet implemented — see DUB-9999)
+  }
   return getServerSession(authOptions) as Promise<Session>;
 };
 

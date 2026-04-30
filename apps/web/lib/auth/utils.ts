@@ -22,6 +22,24 @@ export const getSession = async () => {
   return getServerSession(authOptions) as Promise<Session>;
 };
 
+/**
+ * Strict variant of getSession that throws a DubApiError instead of
+ * returning null when the user isn't authenticated. Intended for
+ * hot-path API routes where the implicit null-return causes confusing
+ * downstream errors ("Cannot read properties of null") rather than a
+ * clean 401.
+ */
+export const requireSession = async (): Promise<Session> => {
+  const session = (await getServerSession(authOptions)) as Session | null;
+  if (!session) {
+    throw new DubApiError({
+      code: "unauthorized",
+      message: "Authentication required",
+    });
+  }
+  return session;
+};
+
 export const getAuthTokenOrThrow = (
   req: Request | NextRequest,
   type: "Bearer" | "Basic" = "Bearer",

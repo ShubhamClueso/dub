@@ -1,6 +1,16 @@
 const { PrismaPlugin } = require("@prisma/nextjs-monorepo-workaround-plugin");
 const { withPlausibleProxy } = require("next-plausible");
 
+// Boot-time guard: refuse to start without the feature-flag service
+// token. Added 2026-05 as part of the global feature-flag rollout —
+// every dub deployment needs this before serving traffic.
+// See: https://linear.app/dub/issue/DUB-10042
+if (!process.env.DUB_FEATURE_FLAG_TOKEN && process.env.NODE_ENV !== "test") {
+  throw new Error(
+    "Please set DUB_FEATURE_FLAG_TOKEN — required for runtime feature-flag evaluation",
+  );
+}
+
 // Suppress specific external package warnings
 const originalConsoleWarn = console.warn;
 console.warn = (...args) => {

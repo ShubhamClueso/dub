@@ -41,8 +41,19 @@ import {
   requestTypeSchema,
 } from "./api-logs/schemas";
 import { PAID_TRAFFIC_PLATFORMS } from "./api/fraud/constants";
+import {
+  APPLICATION_EVENT_STAGES,
+  applicationEventAnalyticsQuerySchema,
+  applicationEventAnalyticsSchema,
+  applicationEventSchema,
+  applicationEventsQuerySchema,
+} from "./application-events/schema";
 import { BOUNTY_SUBMISSION_REQUIREMENTS } from "./bounty/constants";
 import { BOUNTY_SOCIAL_PLATFORMS } from "./bounty/social-content";
+import {
+  commissionAnalyticsQuerySchema,
+  commissionAnalyticsSchema,
+} from "./commissions/schema";
 import {
   FOLDER_PERMISSIONS,
   FOLDER_WORKSPACE_ACCESS,
@@ -57,6 +68,7 @@ import {
   fieldDiffSchema,
   getActivityLogsQuerySchema,
 } from "./zod/schemas/activity-log";
+import { adminNetworkPartnerSchema } from "./zod/schemas/admin";
 import {
   BountyListSchema,
   bountyPerformanceConditionSchema,
@@ -124,6 +136,7 @@ import {
   NetworkPartnerSchema,
   PartnerConversionScoreSchema,
 } from "./zod/schemas/partner-network";
+import { PartnerTagSchema } from "./zod/schemas/partner-tags";
 import {
   createPartnerSchema,
   EnrolledPartnerSchema,
@@ -523,6 +536,7 @@ export type PartnerProfileCustomerProps = z.infer<
 
 export type PartnerProfileLinkProps = z.infer<typeof PartnerProfileLinkSchema>;
 
+export type PartnerTagProps = z.infer<typeof PartnerTagSchema>;
 export type PartnerPayoutMethodSetting = z.infer<
   typeof partnerPayoutMethodSchema
 >;
@@ -538,6 +552,8 @@ export type EnrolledPartnerProps = z.infer<typeof EnrolledPartnerSchema> & {
 export type PartnerApplicationProps = z.infer<typeof PartnerApplicationSchema>;
 
 export type NetworkPartnerProps = z.infer<typeof NetworkPartnerSchema>;
+
+export type AdminNetworkPartner = z.infer<typeof adminNetworkPartnerSchema>;
 
 export type PartnerConversionScore = z.infer<
   typeof PartnerConversionScoreSchema
@@ -921,7 +937,39 @@ export type RequestType = z.infer<typeof requestTypeSchema>;
 
 export type ApiLogTB = z.infer<typeof apiLogSchemaTB>;
 
-export type {
-  CommissionAnalyticsByGroup,
-  CommissionAnalyticsQuery,
-} from "./commissions/schema";
+// Commission events
+export type CommissionAnalyticsQuery = z.infer<
+  typeof commissionAnalyticsQuerySchema
+>;
+
+export type CommissionAnalyticsGroupBy = CommissionAnalyticsQuery["groupBy"];
+
+export type CommissionAnalyticsByGroup = {
+  [K in keyof typeof commissionAnalyticsSchema]: z.infer<
+    (typeof commissionAnalyticsSchema)[K]
+  >;
+};
+
+export type CommissionCategoryRow = CommissionAnalyticsByGroup["type"][number];
+
+export type CommissionAnalyticsPartnerRow =
+  CommissionAnalyticsByGroup["partnerId"][number];
+
+// Application events
+export type ApplicationEvent = z.infer<typeof applicationEventSchema>;
+
+export type ApplicationEventsQuery = z.infer<
+  typeof applicationEventsQuerySchema
+>;
+
+export type ApplicationEventAnalyticsQuery = z.infer<
+  typeof applicationEventAnalyticsQuerySchema
+>;
+
+export type ApplicationEventStages = (typeof APPLICATION_EVENT_STAGES)[number];
+
+export type ApplicationAnalyticsByGroup = {
+  [K in keyof typeof applicationEventAnalyticsSchema]: z.infer<
+    (typeof applicationEventAnalyticsSchema)[K]
+  >;
+};

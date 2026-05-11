@@ -52,7 +52,8 @@ module.exports = withPlausibleProxy({
     optimizePackageImports: [
       "@dub/email",
       "@dub/ui",
-      "@dub/utils",
+      // Disabled: causes "Module not found: chunk-WKSJXYEU.mjs" on Vercel due to tsup's chunked output
+      // "@dub/utils",
       "@team-plain/typescript-sdk",
     ],
     serverActions: {

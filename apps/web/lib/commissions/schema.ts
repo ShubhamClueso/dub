@@ -11,6 +11,7 @@ const sharedCommissionAnalyticsFilterSchema = analyticsQuerySchema
   })
   .extend({
     groupId: z.string().optional(),
+    partnerTagId: z.string().optional(),
     partnerId: z.string().optional(),
     type: z.string().optional(),
     status: z.enum(CommissionStatus).optional(),
@@ -19,7 +20,13 @@ const sharedCommissionAnalyticsFilterSchema = analyticsQuerySchema
 // Commission program analytics (workspace dashboard)
 export const commissionAnalyticsQuerySchema =
   sharedCommissionAnalyticsFilterSchema.extend({
-    groupBy: z.enum(["timeseries", "partnerId", "groupId", "type"]),
+    groupBy: z.enum([
+      "timeseries",
+      "partnerId",
+      "groupId",
+      "partnerTagId",
+      "type",
+    ]),
   });
 
 const commissionTotalsSchema = z.object({
@@ -50,27 +57,9 @@ export const commissionAnalyticsSchema = {
 
   groupId: z.array(commissionCategoryRowSchema),
 
+  partnerTagId: z.array(commissionCategoryRowSchema),
+
   timeseries: z.array(commissionTimeseriesRowSchema),
 
   partnerId: z.array(commissionPartnerIdRowSchema),
 } as const;
-
-export type CommissionAnalyticsQuery = z.infer<
-  typeof commissionAnalyticsQuerySchema
->;
-
-export type CommissionAnalyticsGroupBy = CommissionAnalyticsQuery["groupBy"];
-
-export type CommissionAnalyticsByGroup = {
-  [K in keyof typeof commissionAnalyticsSchema]: z.infer<
-    (typeof commissionAnalyticsSchema)[K]
-  >;
-};
-
-export type CommissionCategoryRow = CommissionAnalyticsByGroup["type"][number];
-
-export type CommissionTimeseriesItem =
-  CommissionAnalyticsByGroup["timeseries"][number];
-
-export type CommissionAnalyticsPartnerRow =
-  CommissionAnalyticsByGroup["partnerId"][number];

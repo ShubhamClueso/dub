@@ -1,8 +1,8 @@
 "use client";
 
-import useCommissionAnalytics, {
-  CommissionAnalyticsPartnerRow,
-} from "@/lib/swr/use-commission-analytics";
+import useCommissionAnalytics from "@/lib/swr/use-commission-analytics";
+import { CommissionAnalyticsPartnerRow } from "@/lib/types";
+import { CountryFlag } from "@/ui/shared/country-flag";
 import {
   Button,
   Table,
@@ -18,11 +18,7 @@ import { PartnerAnalyticsFilterCell } from "./partner-analytics-filter-cell";
 
 const PAGE_SIZE = 10;
 
-export function CommissionsPartnersTable({
-  queryString,
-}: {
-  queryString: string;
-}) {
+export function CommissionsPartnersTable() {
   const { queryParams, searchParams } = useRouterStuff();
   const { pagination, setPagination } = usePagination(PAGE_SIZE);
 
@@ -77,7 +73,6 @@ export function CommissionsPartnersTable({
     isLoading,
     error,
   } = useCommissionAnalytics({
-    queryString,
     groupBy: "partnerId",
   });
 
@@ -128,11 +123,7 @@ export function CommissionsPartnersTable({
           if (!country) return <span className="text-neutral-400">—</span>;
           return (
             <div className="flex items-center gap-2">
-              <img
-                alt={`${country} flag`}
-                src={`https://hatscripts.github.io/circle-flags/flags/${country.toLowerCase()}.svg`}
-                className="size-4 shrink-0"
-              />
+              <CountryFlag countryCode={country} />
               <span className="min-w-0 truncate text-sm text-neutral-700">
                 {COUNTRIES[country] ?? country}
               </span>

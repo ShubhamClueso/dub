@@ -3,6 +3,9 @@
 import { notFound, useParams } from "next/navigation";
 import { AnalyticsChart } from "./analytics-chart";
 import { AnalyticsPartnersTable } from "./analytics-partners-table";
+import { ApplicationsFunnelChart } from "./applications/applications-funnel-chart";
+import { ApplicationsPartnersTable } from "./applications/applications-partners-table";
+import { useApplicationsAnalyticsQuery } from "./applications/use-applications-analytics-query";
 import { CommissionsAnalyticsChart } from "./commissions-analytics-chart";
 import { CommissionsPartnersTable } from "./commissions-partners-table";
 import { CommissionsStatusSelector } from "./commissions-status-selector";
@@ -21,6 +24,10 @@ export default function ProgramAnalyticsTabPage() {
 
   if (tab === "commissions") {
     return <CommissionsTab />;
+  }
+
+  if (tab === "applications") {
+    return <ApplicationsTab />;
   }
 
   return (
@@ -52,14 +59,28 @@ function CommissionsTab() {
           <CommissionsAnalyticsChart
             status={commissionStatus}
             unit={commissionUnit}
-            queryString={commissionsQueryString}
             interval={commissionsInterval}
             start={commissionsStart}
             end={commissionsEnd}
           />
         </div>
       </div>
-      <CommissionsPartnersTable queryString={commissionsQueryString} />
+      <CommissionsPartnersTable />
+    </>
+  );
+}
+
+function ApplicationsTab() {
+  const { stage: applicationsStage, view: applicationsView } =
+    useApplicationsAnalyticsQuery();
+
+  return (
+    <>
+      <ApplicationsFunnelChart
+        stage={applicationsStage}
+        view={applicationsView}
+      />
+      <ApplicationsPartnersTable />
     </>
   );
 }

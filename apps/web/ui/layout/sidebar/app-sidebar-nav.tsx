@@ -12,7 +12,7 @@ import { usePayoutsCount } from "@/lib/swr/use-payouts-count";
 import useProgram from "@/lib/swr/use-program";
 import { useProgramReferralsCount } from "@/lib/swr/use-program-referrals-count";
 import useWorkspace from "@/lib/swr/use-workspace";
-import { useRouterStuff } from "@dub/ui";
+import { type Icon, useRouterStuff } from "@dub/ui";
 import {
   Bell,
   Brush,
@@ -209,7 +209,7 @@ const NAV_AREAS: SidebarNavAreas<SidebarNavData> = {
           },
           {
             name: "Customers",
-            icon: User,
+            icon: User as Icon,
             href: `/${slug}/program/customers`,
             badge: pendingReferralsCount
               ? pendingReferralsCount > 99
@@ -478,7 +478,7 @@ const NAV_AREAS: SidebarNavAreas<SidebarNavData> = {
           {
             name: "Notifications",
             icon: Bell,
-            href: `/${slug}/settings/notifications`,
+            href: "/settings/notifications",
             arrow: true,
           },
         ],
@@ -509,9 +509,9 @@ export function AppSidebarNav({
             pathname.includes("/program/messages/") ||
             pathname.endsWith("/program/payouts/success")
           ? null
-          : pathname.startsWith(`/${slug}/links`)
-            ? "links"
-            : "program";
+          : pathname.startsWith(`/${slug}/program`)
+            ? "program"
+            : "links";
   }, [slug, pathname]);
 
   const { program } = useProgram({

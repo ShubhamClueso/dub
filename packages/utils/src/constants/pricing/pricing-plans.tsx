@@ -24,9 +24,11 @@ export type PlanDetails = {
     payouts: number;
     domains: number;
     tags: number;
+    partnerTags: number;
     folders: number;
     groups: number;
     networkInvites: number;
+    partners: number;
     users: number;
     ai: number;
     api: number;
@@ -141,9 +143,11 @@ export const PLANS: PlanDetails[] = [
       payouts: 0,
       domains: 3,
       tags: 5,
+      partnerTags: 0,
       folders: 0,
       groups: 0,
       networkInvites: 0,
+      partners: 0,
       users: 1,
       ai: 10,
       api: 60,
@@ -164,9 +168,11 @@ export const PLANS: PlanDetails[] = [
       payouts: 0,
       domains: 10,
       tags: 25,
+      partnerTags: 0,
       folders: 3,
       groups: 0,
       networkInvites: 0,
+      partners: 0,
       users: 3,
       ai: 1_000,
       api: 600,
@@ -253,9 +259,11 @@ export const PLANS: PlanDetails[] = [
       payouts: 2_500_00,
       domains: 100,
       tags: INFINITY_NUMBER,
+      partnerTags: 10,
       folders: 20,
       groups: 3,
       networkInvites: 0,
+      partners: 500,
       users: 10,
       ai: 1_000,
       api: 1_200,
@@ -361,9 +369,11 @@ export const PLANS: PlanDetails[] = [
       payouts: 15_000_00,
       domains: 250,
       tags: INFINITY_NUMBER,
+      partnerTags: INFINITY_NUMBER,
       folders: 50,
       groups: INFINITY_NUMBER,
       networkInvites: 0,
+      partners: INFINITY_NUMBER,
       users: 20,
       ai: 1_000,
       api: 3_000,
@@ -478,9 +488,11 @@ export const PLANS: PlanDetails[] = [
       payouts: INFINITY_NUMBER,
       domains: 250,
       tags: INFINITY_NUMBER,
+      partnerTags: INFINITY_NUMBER,
       folders: INFINITY_NUMBER,
       groups: INFINITY_NUMBER,
       networkInvites: 20,
+      partners: INFINITY_NUMBER,
       users: 30,
       ai: 1_000,
       api: 3_000,
@@ -608,17 +620,13 @@ export const isDowngradePlan = ({
 export const getSuggestedPlan = ({
   events,
   links,
-  suggestFree = false,
 }: {
   events?: number;
   links?: number;
-  suggestFree?: boolean;
 }): { plan: PlanDetails; planTier: number } => {
   let match: { plan: PlanDetails; planTier: number } | null = null;
 
   for (const p of PLANS) {
-    if (!suggestFree && p.price.monthly === 0) continue;
-
     const matchingTier = [
       1,
       ...Object.keys(p.tiers ?? {})
@@ -645,8 +653,8 @@ export const getSuggestedPlan = ({
 
 export const isLegacyBusinessPlan = ({
   plan = "business",
-  payoutsLimit = 0,
+  partnersLimit = 0,
 }: {
   plan?: string;
-  payoutsLimit?: number;
-}) => plan === "business" && payoutsLimit === 0;
+  partnersLimit?: number;
+}) => plan === "business" && partnersLimit === 0;

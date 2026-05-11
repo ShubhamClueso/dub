@@ -3,12 +3,13 @@
 import { confirmEmailChange } from "@/lib/auth/confirm-email-change";
 import { throwIfNoPermission } from "@/lib/auth/partner-users/throw-if-no-permission";
 import { qstash } from "@/lib/cron";
+import { isReservedUsername } from "@/lib/edge-config";
 import { storage } from "@/lib/storage";
 import { stripe } from "@/lib/stripe";
 import { partnerProfileChangeHistoryLogSchema } from "@/lib/zod/schemas/partner-profile";
 import {
   MAX_PARTNER_DESCRIPTION_LENGTH,
-  PartnerProfileSchema,
+  PartnerProfileDetailsSchema,
 } from "@/lib/zod/schemas/partners";
 import { prisma } from "@dub/prisma";
 import { Partner, PartnerProfileType } from "@dub/prisma/client";
@@ -18,6 +19,8 @@ import {
   deepEqual,
   nanoid,
   PARTNERS_DOMAIN,
+  RESERVED_SLUGS,
+  validSlugRegex,
 } from "@dub/utils";
 import { waitUntil } from "@vercel/functions";
 import * as z from "zod/v4";
@@ -28,17 +31,31 @@ const updatePartnerProfileSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required").optional(),
     email: z.email().optional(),
+    username: z.string().trim().toLowerCase().min(3).max(100).optional(),
     image: uploadedImageSchema.nullish(),
     description: z.string().max(MAX_PARTNER_DESCRIPTION_LENGTH).nullish(),
     country: z.enum(Object.keys(COUNTRIES) as [string, ...string[]]).nullish(),
     profileType: z.enum(PartnerProfileType).optional(),
     companyName: z.string().nullish(),
   })
-  .extend(PartnerProfileSchema.partial().shape)
+  .extend(PartnerProfileDetailsSchema.partial().shape)
   .transform((data) => ({
     ...data,
     companyName: data.profileType === "individual" ? null : data.companyName,
-  }));
+  }))
+  .refine(
+    (data) => {
+      if (data.profileType === "company") {
+        return !!data.companyName;
+      }
+
+      return true;
+    },
+    {
+      message: "Legal company name is required when profile type is 'company'.",
+      path: ["companyName"],
+    },
+  );
 
 // Update a partner profile
 export const updatePartnerProfileAction = authPartnerActionClient
@@ -63,13 +80,8 @@ export const updatePartnerProfileAction = authPartnerActionClient
       industryInterests,
       preferredEarningStructures,
       salesChannels,
+      username,
     } = parsedInput;
-
-    if (
-      profileType === "company" &&
-      (companyName === undefined ? !partner.companyName : !companyName)
-    )
-      throw new Error("Legal company name is required.");
 
     await updatedComplianceFieldsChecks({
       partner,
@@ -89,6 +101,27 @@ export const updatePartnerProfileAction = authPartnerActionClient
       imageUrl = uploaded.url;
     }
 
+    if (username && username !== partner.username) {
+      if (!validSlugRegex.test(username) || RESERVED_SLUGS.includes(username)) {
+        throw new Error("Invalid username");
+      }
+      if (await isReservedUsername(username)) {
+        throw new Error("Invalid username");
+      }
+      const existingPartner = await prisma.partner.findUnique({
+        where: {
+          username,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingPartner && existingPartner.id !== partner.id) {
+        throw new Error(`Username "${username}" is already taken.`);
+      }
+    }
+
     try {
       const updatedPartner = await prisma.partner.update({
         where: {
@@ -98,6 +131,7 @@ export const updatePartnerProfileAction = authPartnerActionClient
           name,
           description,
           ...(imageUrl && { image: imageUrl }),
+          username,
           country,
           profileType,
           companyName,
@@ -128,12 +162,6 @@ export const updatePartnerProfileAction = authPartnerActionClient
               })),
             },
           }),
-        },
-        include: {
-          preferredEarningStructures: true,
-          salesChannels: true,
-          programs: true,
-          platforms: true,
         },
       });
 

@@ -123,9 +123,11 @@ export async function customerSubscriptionDeleted(
       domainsLimit: FREE_PLAN.limits.domains!,
       aiLimit: FREE_PLAN.limits.ai!,
       tagsLimit: FREE_PLAN.limits.tags!,
+      partnerTagsLimit: FREE_PLAN.limits.partnerTags!,
       foldersLimit: FREE_PLAN.limits.folders!,
       groupsLimit: FREE_PLAN.limits.groups!,
       networkInvitesLimit: FREE_PLAN.limits.networkInvites!,
+      partnersLimit: FREE_PLAN.limits.partners!,
       usersLimit: FREE_PLAN.limits.users!,
       paymentFailedAt: null,
     },
@@ -251,7 +253,8 @@ export async function customerSubscriptionDeleted(
   }
 
   const owner = workspaceUsers[0];
-  if (owner.email && losesAdvancedFeatures) {
+
+  if (owner?.email && losesAdvancedFeatures) {
     await sendEmail({
       to: owner.email,
       subject: "Your Advanced plan features have been removed",

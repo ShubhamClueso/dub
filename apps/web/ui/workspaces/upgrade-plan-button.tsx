@@ -12,12 +12,12 @@ import {
   isWorkspaceBillingTrialActive,
   SELF_SERVE_PAID_PLANS,
 } from "@dub/utils";
-import { useOnboardingTrialVariant } from "app/app.dub.co/(onboarding)/onboarding/use-onboarding-trial-variant";
 import { usePlausible } from "next-plausible";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { usePlanChangeConfirmationModal } from "../modals/plan-change-confirmation-modal";
 import { useStartPaidPlanModal } from "../modals/start-paid-plan-modal";
+import { useSwitchTrialPlanModal } from "../modals/switch-trial-plan-modal";
 
 export function UpgradePlanButton({
   plan,
@@ -43,7 +43,6 @@ export function UpgradePlanButton({
 
   const plausible = usePlausible();
   const product = searchParams.get("product");
-  const { isTrialVariant } = useOnboardingTrialVariant();
   const isTrialActive = isWorkspaceBillingTrialActive(trialEndsAt);
 
   const selectedPlan =
@@ -79,28 +78,34 @@ export function UpgradePlanButton({
     };
   }, [currentPlan, defaultProgramId, selectedPlan.name]);
 
-  const performUpgrade = () => {
+  const performUpgrade = async () => {
     setClicked(true);
-    fetch(`/api/workspaces/${workspaceSlug}/billing/upgrade`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        plan,
-        tier,
-        period,
-        baseUrl: `${APP_DOMAIN}${pathname}${queryString.length > 0 ? `?${queryString}` : ""}`,
-        onboarding: searchParams.get("workspace") ? "true" : "false",
-        isTrialVariant: isTrialVariant ? "true" : "false",
-      }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => null);
-          throw new Error(body?.error?.message ?? "Failed to start checkout.");
-        }
+    try {
+      const res = await fetch(
+        `/api/workspaces/${workspaceSlug}/billing/upgrade`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            plan,
+            tier,
+            period,
+            baseUrl: `${APP_DOMAIN}${pathname}${queryString.length > 0 ? `?${queryString}` : ""}`,
+            onboarding: searchParams.get("workspace") ? "true" : "false",
+          }),
+        },
+      );
 
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error?.message ?? "Failed to start checkout.");
+      }
+
+      if (!stripeId || currentPlan === "free") {
+        const data = await res.json();
+        const { id: sessionId } = data;
         plausible("Opened Checkout", {
           props: {
             ...(product && { product: capitalize(product) }),
@@ -108,26 +113,24 @@ export function UpgradePlanButton({
             planPeriod: capitalize(period),
           },
         });
-        if (!stripeId || currentPlan === "free") {
-          const data = await res.json();
-          const { id: sessionId } = data;
-          const stripe = await getStripe();
-          stripe?.redirectToCheckout({ sessionId });
-        } else {
-          const { url } = await res.json();
-          router.push(url);
-        }
-      })
-      .catch((err) => {
-        alert(err);
-      })
-      .finally(() => {
-        setClicked(false);
-      });
+        const stripe = await getStripe();
+        stripe?.redirectToCheckout({ sessionId });
+      } else {
+        const { url } = await res.json();
+        router.push(url);
+      }
+    } catch (err) {
+      alert(err);
+    } finally {
+      setClicked(false);
+    }
   };
 
   const { setShowPlanChangeConfirmationModal, PlanChangeConfirmationModal } =
     usePlanChangeConfirmationModal({
+      newPlan: plan,
+      newPeriod: period,
+      newTier: tier,
       onConfirm: performUpgrade,
       confirmationMode:
         losesAdvancedFeatures && !losesPartnerAccess
@@ -138,6 +141,17 @@ export function UpgradePlanButton({
   const { StartPaidPlanModal, setShowStartPaidPlanModal } =
     useStartPaidPlanModal();
 
+  const isSwitchingTrialPlan =
+    isTrialActive && !isCurrentPlan && currentPlan !== "free";
+
+  const { SwitchTrialPlanModal, setShowSwitchTrialPlanModal } =
+    useSwitchTrialPlanModal({
+      newPlan: plan,
+      newPeriod: period,
+      newTier: tier,
+      onConfirm: performUpgrade,
+    });
+
   const handleClick = () => {
     if (isCurrentPlan && isTrialActive) {
       setShowStartPaidPlanModal(true);
@@ -145,6 +159,11 @@ export function UpgradePlanButton({
     }
     if (losesPartnerAccess || losesAdvancedFeatures) {
       setShowPlanChangeConfirmationModal(true);
+      return;
+    }
+    if (isSwitchingTrialPlan) {
+      setShowSwitchTrialPlanModal(true);
+      return;
     } else {
       performUpgrade();
     }
@@ -154,19 +173,21 @@ export function UpgradePlanButton({
     <>
       <PlanChangeConfirmationModal />
       <StartPaidPlanModal />
+      <SwitchTrialPlanModal />
       <Button
+        // these are the default text for onboarding plan selector
         text={
           !currentPlan
             ? "Loading..."
             : isCurrentPlan
               ? isTrialActive
                 ? "Activate plan"
-                : "Your current plan"
+                : "Current plan"
               : currentPlan === "free"
-                ? isTrialVariant
-                  ? `Start ${DUB_TRIAL_PERIOD_DAYS}-day trial · ${selectedPlan.name} ${capitalize(period)}`
-                  : `Upgrade to ${selectedPlan.name} ${capitalize(period)}`
-                : `Switch to ${selectedPlan.name} ${capitalize(period)}`
+                ? `Start ${DUB_TRIAL_PERIOD_DAYS}-day trial · ${selectedPlan.name} ${capitalize(period)}`
+                : isTrialActive
+                  ? `Switch trial to ${selectedPlan.name} ${capitalize(period)}`
+                  : `Switch to ${selectedPlan.name} ${capitalize(period)}`
         }
         loading={clicked || !currentPlan}
         disabled={!workspaceSlug || (isCurrentPlan && !isTrialActive)}

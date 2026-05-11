@@ -1,16 +1,16 @@
 import type { PlanDetails } from "./pricing-plans";
 
-export const TRIAL_PROGRAM_ENROLLMENT_LIMIT = 100;
-
 export const TRIAL_LIMITS = {
   links: 100,
   clicks: 5_000,
   payouts: 500_00,
   domains: 5,
   tags: 5,
+  partnerTags: 5,
   folders: 5,
   groups: 5,
   networkInvites: 0,
+  partners: 50,
   users: 5,
   ai: 100,
   api: 120,
@@ -30,6 +30,7 @@ const TRIAL_LIMIT_FEATURE_PHRASES: Record<TrialLimitResource, string> = {
   tags: "create more tags",
   folders: "create more folders",
   groups: "create more groups",
+  partnerTags: "create more partner tags",
   networkInvites: "invite partners from the network",
   users: "invite more teammates",
   partnerEnrollments: "add more partners",
@@ -38,6 +39,7 @@ const TRIAL_LIMIT_FEATURE_PHRASES: Record<TrialLimitResource, string> = {
   ai: "",
   api: "",
   analyticsApi: "",
+  partners: "",
 };
 
 export function getTrialLimitFeaturePhrase(kind: TrialLimitResource): string {
@@ -90,9 +92,11 @@ export function getWorkspaceLimitsForStripeSubscriptionStatus({
     users: TRIAL_LIMITS.users,
     domains: TRIAL_LIMITS.domains,
     tags: TRIAL_LIMITS.tags,
+    partnerTags: TRIAL_LIMITS.partnerTags,
     folders: TRIAL_LIMITS.folders,
     groups: TRIAL_LIMITS.groups,
     networkInvites: TRIAL_LIMITS.networkInvites,
+    partners: TRIAL_LIMITS.partners,
     ai: TRIAL_LIMITS.ai,
     api: TRIAL_LIMITS.api,
     analyticsApi: TRIAL_LIMITS.analyticsApi,

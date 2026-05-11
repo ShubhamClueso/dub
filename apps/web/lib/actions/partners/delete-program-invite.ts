@@ -40,6 +40,11 @@ export const deleteProgramInviteAction = authActionClient
           program: true,
           partner: true,
           links: true,
+          programPartnerTags: {
+            include: {
+              partnerTag: true,
+            },
+          },
         },
       });
 
@@ -54,9 +59,23 @@ export const deleteProgramInviteAction = authActionClient
 
     await Promise.allSettled([
       prisma.link.deleteMany({
-        where: { id: { in: linksToDelete.map((link) => link.id) } },
+        where: {
+          id: {
+            in: linksToDelete.map((link) => link.id),
+          },
+        },
       }),
-      bulkDeleteLinks(linksToDelete),
+
+      bulkDeleteLinks(
+        linksToDelete.map((link) => ({
+          ...link,
+          programEnrollment: {
+            groupId: programEnrollment.groupId,
+            programPartnerTags: programEnrollment.programPartnerTags,
+          },
+        })),
+      ),
+
       prisma.discoveredPartner.delete({
         where: {
           programId_partnerId: {
@@ -67,11 +86,24 @@ export const deleteProgramInviteAction = authActionClient
       }),
     ]);
 
-    await prisma.programEnrollment.delete({
-      where: {
-        id: programEnrollment.id,
-      },
-    });
+    await prisma.$transaction([
+      prisma.programEnrollment.delete({
+        where: {
+          id: programEnrollment.id,
+        },
+      }),
+
+      prisma.project.update({
+        where: {
+          id: workspace.id,
+        },
+        data: {
+          partnersUsage: {
+            decrement: 1,
+          },
+        },
+      }),
+    ]);
 
     waitUntil(
       recordAuditLog({

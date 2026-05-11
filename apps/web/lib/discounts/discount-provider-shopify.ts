@@ -1,3 +1,4 @@
+import { decryptOrPassthrough } from "@/lib/encryption";
 import { prisma } from "@dub/prisma";
 import { Discount, Project } from "@dub/prisma/client";
 import { SHOPIFY_INTEGRATION_ID, nanoid } from "@dub/utils";
@@ -70,7 +71,12 @@ async function requireInstalledIntegration(
 
   return {
     ...installation,
-    credentials,
+    credentials: {
+      ...credentials,
+      accessToken: credentials.accessToken
+        ? decryptOrPassthrough(credentials.accessToken)
+        : credentials.accessToken,
+    },
   };
 }
 
@@ -90,11 +96,22 @@ function createShopifyDiscountProvider() {
     shouldRetry = true,
   }: {
     workspace: Pick<Project, "id" | "shopifyStoreId">;
-    discount: Pick<Discount, "id" | "amount" | "type">;
+    discount: Pick<Discount, "id" | "amount" | "type" | "maxDuration">;
     code: string;
     shouldRetry?: boolean;
   }) => {
     const { credentials } = await requireInstalledIntegration(workspace);
+
+    // Map Dub's maxDuration (months) to Shopify's recurringCycleLimit (subscription billing cycles):
+    // - null  -> 0 (Shopify: applies indefinitely / forever)
+    // - 0     -> 1 (one-time only -> only first subscription cycle)
+    // - N     -> N (applies for N billing cycles)
+    const recurringCycleLimit =
+      discount.maxDuration === null
+        ? 0
+        : discount.maxDuration === 0
+          ? 1
+          : discount.maxDuration;
 
     let attempt = 0;
     let currentCode = code;
@@ -138,8 +155,11 @@ function createShopifyDiscountProvider() {
               startsAt: new Date().toISOString(),
               customerSelection: { all: true },
               appliesOncePerCustomer: true,
+              recurringCycleLimit,
               customerGets: {
                 items: { all: true },
+                appliesOnOneTimePurchase: true,
+                appliesOnSubscription: true,
                 value:
                   discount.type === "percentage"
                     ? { percentage: discount.amount / 100 }
